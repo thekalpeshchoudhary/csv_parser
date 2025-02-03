@@ -19,16 +19,20 @@ export const logToFile = (log, fileName) => {
 }
 
 export const logDecorator = () => {
-    console.log('-=-=-=-=-=-=-=-=-=-=-=-=-=-=');
+    console.log('-=-=-=-=-=-=-=-=-=-=-=-=-=-');
 }
 
 export const extractJsonDataFromRows = (allRows) => {
     const headingRow = allRows[0].split(',');
-    const dataRows = allRows.slice(1, allRows.length - 1)
+    const dataRows = allRows.slice(1)
     const jsonDataArray = [];
     dataRows.forEach(eachRow => {
         const eachDataObj = {}
         const eachLineData = eachRow.split(',');
+        const isEmptyRow = eachLineData.every(eachData => { return eachData === '' || eachData === '\r' });
+        if (isEmptyRow) {
+            return;
+        }
         eachLineData.forEach((eachData, i) => {
             const propertyTrain = headingRow?.[i]?.split('.');
             let previousRef = eachDataObj;
@@ -41,6 +45,7 @@ export const extractJsonDataFromRows = (allRows) => {
                 }
             })
         });
+
         jsonDataArray.push(eachDataObj);
     })
 
