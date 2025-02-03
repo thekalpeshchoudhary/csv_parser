@@ -9,8 +9,8 @@ const startBatchUpload = async (jsonDataArray) => {
     let batchStart = 0;
     let dbUploadFailed = false;
 
-    await connectionPool.connect();
-    await connectionPool.query('BEGIN');
+    const dbPoolClient = await connectionPool.connect();
+    await dbPoolClient.query('BEGIN');
 
     const promises = [];
 
@@ -18,7 +18,7 @@ const startBatchUpload = async (jsonDataArray) => {
         const batch = jsonDataArray.slice(batchStart, batchStart + 1000);
         const dataInsertPromise = new Promise((resolve, reject) => {
             const batchNo = `${batchStart} to ${batchStart + 1000}`;
-            insertUserDataIntoDb(batch).then(() => {
+            insertUserDataIntoDb(batch,dbPoolClient).then(() => {
                 resolve(`done : ${batchNo}`)
             }).catch((err) => {
                 reject(`rejected : ${batchNo}, ${err}`)
@@ -31,18 +31,18 @@ const startBatchUpload = async (jsonDataArray) => {
     await Promise
         .all(promises)
         .then(() => {
-            connectionPool.query('COMMIT')
+            dbPoolClient.query('COMMIT')
         })
         .catch((reason) => {
             dbUploadFailed = reason;
-            connectionPool.query('ROLLBACK')
+            dbPoolClient.query('ROLLBACK')
         });
 
     if (dbUploadFailed) throw dbUploadFailed;
 
     return { dbUploadFailed }
 }
-const insertUserDataIntoDb = async (jsonDataArray) => {
+const insertUserDataIntoDb = async (jsonDataArray,dbPoolClient) => {
     let queryValuesPlaceHolder = '';
     let insertFail = '';
 
@@ -58,7 +58,7 @@ const insertUserDataIntoDb = async (jsonDataArray) => {
         ]
     });
 
-    await connectionPool.query(
+    await dbPoolClient.query(
         `INSERT INTO users (name, age, address, additional_info, uid) VALUES ${queryValuesPlaceHolder} RETURNING *`,
         queryDataMap.flat(),
     ).catch(err => {
